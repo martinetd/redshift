@@ -34,27 +34,30 @@
 #include "redshift.h"
 
 
+struct gamma_state {};
+
+
 static int
-gamma_dummy_init(void **state)
+gamma_dummy_init(gamma_state_t **state)
 {
 	*state = NULL;
 	return 0;
 }
 
 static int
-gamma_dummy_start(void *state)
+gamma_dummy_start(gamma_state_t *state)
 {
 	fputs(_("WARNING: Using dummy gamma method! Display will not be affected by this gamma method.\n"), stderr);
 	return 0;
 }
 
 static void
-gamma_dummy_restore(void *state)
+gamma_dummy_restore(gamma_state_t *state)
 {
 }
 
 static void
-gamma_dummy_free(void *state)
+gamma_dummy_free(gamma_state_t *state)
 {
 }
 
@@ -66,7 +69,7 @@ gamma_dummy_print_help(FILE *f)
 }
 
 static int
-gamma_dummy_set_option(void *state, const char *key, const char *value)
+gamma_dummy_set_option(gamma_state_t *state, const char *key, const char *value)
 {
 	fprintf(stderr, _("Unknown method parameter: `%s'.\n"), key);
 	return -1;
@@ -74,7 +77,7 @@ gamma_dummy_set_option(void *state, const char *key, const char *value)
 
 static int
 gamma_dummy_set_temperature(
-	void *state, const color_setting_t *setting, int preserve)
+	gamma_state_t *state, const color_setting_t *setting, int preserve)
 {
 	printf(_("Temperature: %i\n"), setting->temperature);
 	return 0;
@@ -83,11 +86,11 @@ gamma_dummy_set_temperature(
 
 const gamma_method_t dummy_gamma_method = {
 	"dummy", 0,
-	(gamma_method_init_func *)gamma_dummy_init,
-	(gamma_method_start_func *)gamma_dummy_start,
-	(gamma_method_free_func *)gamma_dummy_free,
-	(gamma_method_print_help_func *)gamma_dummy_print_help,
-	(gamma_method_set_option_func *)gamma_dummy_set_option,
-	(gamma_method_restore_func *)gamma_dummy_restore,
-	(gamma_method_set_temperature_func *)gamma_dummy_set_temperature
+	gamma_dummy_init,
+	gamma_dummy_start,
+	gamma_dummy_free,
+	gamma_dummy_print_help,
+	gamma_dummy_set_option,
+	gamma_dummy_restore,
+	gamma_dummy_set_temperature
 };
