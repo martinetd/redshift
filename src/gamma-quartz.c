@@ -43,26 +43,26 @@ typedef struct {
 	float *saved_ramps;
 } quartz_display_state_t;
 
-typedef struct {
+struct gamma_state {
 	quartz_display_state_t *displays;
 	uint32_t display_count;
-} quartz_state_t;
+};
 
 
 static int
-quartz_init(quartz_state_t **state)
+quartz_init(gamma_state **state)
 {
-	*state = malloc(sizeof(quartz_state_t));
+	*state = malloc(sizeof(gamma_state));
 	if (*state == NULL) return -1;
 
-	quartz_state_t *s = *state;
+	gamma_state *s = *state;
 	s->displays = NULL;
 
 	return 0;
 }
 
 static int
-quartz_start(quartz_state_t *state)
+quartz_start(gamma_state *state)
 {
 	CGError error;
 	uint32_t display_count;
@@ -147,13 +147,13 @@ quartz_start(quartz_state_t *state)
 }
 
 static void
-quartz_restore(quartz_state_t *state)
+quartz_restore(gamma_state *state)
 {
 	CGDisplayRestoreColorSyncSettings();
 }
 
 static void
-quartz_free(quartz_state_t *state)
+quartz_free(gamma_state *state)
 {
 	if (state->displays != NULL) {
 		for (int i = 0; i < state->display_count; i++) {
@@ -172,7 +172,7 @@ quartz_print_help(FILE *f)
 }
 
 static int
-quartz_set_option(quartz_state_t *state, const char *key, const char *value)
+quartz_set_option(gamma_state *state, const char *key, const char *value)
 {
 	if (strcasecmp(key, "preserve") == 0) {
 		fprintf(stderr, _("Parameter `%s` is now always on; "
@@ -189,7 +189,7 @@ quartz_set_option(quartz_state_t *state, const char *key, const char *value)
 
 static void
 quartz_set_temperature_for_display(
-	quartz_state_t *state, int display_index,
+	gamma_state *state, int display_index,
 	const color_setting_t *setting, int preserve)
 {
 	CGDirectDisplayID display = state->displays[display_index].display;
@@ -236,7 +236,7 @@ quartz_set_temperature_for_display(
 
 static int
 quartz_set_temperature(
-	quartz_state_t *state, const color_setting_t *setting, int preserve)
+	gamma_state *state, const color_setting_t *setting, int preserve)
 {
 	for (int i = 0; i < state->display_count; i++) {
 		quartz_set_temperature_for_display(
@@ -249,11 +249,11 @@ quartz_set_temperature(
 
 const gamma_method_t quartz_gamma_method = {
 	"quartz", 1,
-	(gamma_method_init_func *)quartz_init,
-	(gamma_method_start_func *)quartz_start,
-	(gamma_method_free_func *)quartz_free,
-	(gamma_method_print_help_func *)quartz_print_help,
-	(gamma_method_set_option_func *)quartz_set_option,
-	(gamma_method_restore_func *)quartz_restore,
-	(gamma_method_set_temperature_func *)quartz_set_temperature
+	quartz_init,
+	quartz_start,
+	quartz_free,
+	quartz_print_help,
+	quartz_set_option,
+	quartz_restore,
+	quartz_set_temperature
 };

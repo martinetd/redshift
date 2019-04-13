@@ -48,7 +48,7 @@ typedef struct {
 	uint16_t *saved_ramps;
 } randr_crtc_state_t;
 
-typedef struct {
+struct gamma_state {
 	xcb_connection_t *conn;
 	xcb_screen_t *screen;
 	int preferred_screen;
@@ -57,17 +57,17 @@ typedef struct {
 	int* crtc_num;
 	unsigned int crtc_count;
 	randr_crtc_state_t *crtcs;
-} randr_state_t;
+};
 
 
 static int
-randr_init(randr_state_t **state)
+randr_init(gamma_state_t **state)
 {
 	/* Initialize state. */
-	*state = malloc(sizeof(randr_state_t));
+	*state = malloc(sizeof(gamma_state_t));
 	if (*state == NULL) return -1;
 
-	randr_state_t *s = *state;
+	gamma_state_t *s = *state;
 	s->screen_num = -1;
 	s->crtc_num = NULL;
 
@@ -114,7 +114,7 @@ randr_init(randr_state_t **state)
 }
 
 static int
-randr_start(randr_state_t *state)
+randr_start(gamma_state_t *state)
 {
 	xcb_generic_error_t *error;
 
@@ -251,7 +251,7 @@ randr_start(randr_state_t *state)
 }
 
 static void
-randr_restore(randr_state_t *state)
+randr_restore(gamma_state_t *state)
 {
 	xcb_generic_error_t *error;
 
@@ -280,7 +280,7 @@ randr_restore(randr_state_t *state)
 }
 
 static void
-randr_free(randr_state_t *state)
+randr_free(gamma_state_t *state)
 {
 	/* Free CRTC state */
 	for (int i = 0; i < state->crtc_count; i++) {
@@ -311,7 +311,7 @@ randr_print_help(FILE *f)
 }
 
 static int
-randr_set_option(randr_state_t *state, const char *key, const char *value)
+randr_set_option(gamma_state_t *state, const char *key, const char *value)
 {
 	if (strcasecmp(key, "screen") == 0) {
 		state->screen_num = atoi(value);
@@ -375,7 +375,7 @@ randr_set_option(randr_state_t *state, const char *key, const char *value)
 
 static int
 randr_set_temperature_for_crtc(
-	randr_state_t *state, int crtc_num, const color_setting_t *setting,
+	gamma_state_t *state, int crtc_num, const color_setting_t *setting,
 	int preserve)
 {
 	xcb_generic_error_t *error;
@@ -445,7 +445,7 @@ randr_set_temperature_for_crtc(
 
 static int
 randr_set_temperature(
-	randr_state_t *state, const color_setting_t *setting, int preserve)
+	gamma_state_t *state, const color_setting_t *setting, int preserve)
 {
 	int r;
 
@@ -471,11 +471,11 @@ randr_set_temperature(
 
 const gamma_method_t randr_gamma_method = {
 	"randr", 1,
-	(gamma_method_init_func *)randr_init,
-	(gamma_method_start_func *)randr_start,
-	(gamma_method_free_func *)randr_free,
-	(gamma_method_print_help_func *)randr_print_help,
-	(gamma_method_set_option_func *)randr_set_option,
-	(gamma_method_restore_func *)randr_restore,
-	(gamma_method_set_temperature_func *)randr_set_temperature
+	randr_init,
+	randr_start,
+	randr_free,
+	randr_print_help,
+	randr_set_option,
+	randr_restore,
+	randr_set_temperature
 };

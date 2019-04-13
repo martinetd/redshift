@@ -54,23 +54,23 @@ typedef struct {
 	uint16_t* b_gamma;
 } drm_crtc_state_t;
 
-typedef struct {
+struct gamma_state {
 	int card_num;
 	int crtc_num;
 	int fd;
 	drmModeRes* res;
 	drm_crtc_state_t* crtcs;
-} drm_state_t;
+};
 
 
 static int
-drm_init(drm_state_t **state)
+drm_init(gamma_state_t **state)
 {
 	/* Initialize state. */
-	*state = malloc(sizeof(drm_state_t));
+	*state = malloc(sizeof(gamma_state_t));
 	if (*state == NULL) return -1;
 
-	drm_state_t *s = *state;
+	gamma_state_t *s = *state;
 	s->card_num = 0;
 	s->crtc_num = -1;
 	s->fd = -1;
@@ -81,7 +81,7 @@ drm_init(drm_state_t **state)
 }
 
 static int
-drm_start(drm_state_t *state)
+drm_start(gamma_state_t *state)
 {
 	/* Acquire access to a graphics card. */
 	long maxlen = strlen(DRM_DIR_NAME) + strlen(DRM_DEV_NAME) + 10;
@@ -199,7 +199,7 @@ drm_start(drm_state_t *state)
 }
 
 static void
-drm_restore(drm_state_t *state)
+drm_restore(gamma_state_t *state)
 {
 	drm_crtc_state_t *crtcs = state->crtcs;
 	while (crtcs->crtc_num >= 0) {
@@ -212,7 +212,7 @@ drm_restore(drm_state_t *state)
 }
 
 static void
-drm_free(drm_state_t *state)
+drm_free(gamma_state_t *state)
 {
 	if (state->crtcs != NULL) {
 		drm_crtc_state_t *crtcs = state->crtcs;
@@ -250,7 +250,7 @@ drm_print_help(FILE *f)
 }
 
 static int
-drm_set_option(drm_state_t *state, const char *key, const char *value)
+drm_set_option(gamma_state_t *state, const char *key, const char *value)
 {
 	if (strcasecmp(key, "card") == 0) {
 		state->card_num = atoi(value);
@@ -270,7 +270,7 @@ drm_set_option(drm_state_t *state, const char *key, const char *value)
 
 static int
 drm_set_temperature(
-	drm_state_t *state, const color_setting_t *setting, int preserve)
+	gamma_state_t *state, const color_setting_t *setting, int preserve)
 {
 	drm_crtc_state_t *crtcs = state->crtcs;
 	int last_gamma_size = 0;
@@ -321,11 +321,11 @@ drm_set_temperature(
 
 const gamma_method_t drm_gamma_method = {
 	"drm", 0,
-	(gamma_method_init_func *)drm_init,
-	(gamma_method_start_func *)drm_start,
-	(gamma_method_free_func *)drm_free,
-	(gamma_method_print_help_func *)drm_print_help,
-	(gamma_method_set_option_func *)drm_set_option,
-	(gamma_method_restore_func *)drm_restore,
-	(gamma_method_set_temperature_func *)drm_set_temperature
+	drm_init,
+	drm_start,
+	drm_free,
+	drm_print_help,
+	drm_set_option,
+	drm_restore,
+	drm_set_temperature
 };

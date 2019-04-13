@@ -37,21 +37,21 @@
 #include "colorramp.h"
 
 
-typedef struct {
+struct gamma_state {
 	Display *display;
 	int screen_num;
 	int ramp_size;
 	uint16_t *saved_ramps;
-} vidmode_state_t;
+};
 
 
 static int
-vidmode_init(vidmode_state_t **state)
+vidmode_init(gamma_state_t **state)
 {
-	*state = malloc(sizeof(vidmode_state_t));
+	*state = malloc(sizeof(gamma_state_t));
 	if (*state == NULL) return -1;
 
-	vidmode_state_t *s = *state;
+	gamma_state_t *s = *state;
 	s->screen_num = -1;
 	s->saved_ramps = NULL;
 
@@ -66,7 +66,7 @@ vidmode_init(vidmode_state_t **state)
 }
 
 static int
-vidmode_start(vidmode_state_t *state)
+vidmode_start(gamma_state_t *state)
 {
 	int r;
 	int screen_num = state->screen_num;
@@ -123,7 +123,7 @@ vidmode_start(vidmode_state_t *state)
 }
 
 static void
-vidmode_free(vidmode_state_t *state)
+vidmode_free(gamma_state_t *state)
 {
 	/* Free saved ramps */
 	free(state->saved_ramps);
@@ -148,7 +148,7 @@ vidmode_print_help(FILE *f)
 }
 
 static int
-vidmode_set_option(vidmode_state_t *state, const char *key, const char *value)
+vidmode_set_option(gamma_state_t *state, const char *key, const char *value)
 {
 	if (strcasecmp(key, "screen") == 0) {
 		state->screen_num = atoi(value);
@@ -166,7 +166,7 @@ vidmode_set_option(vidmode_state_t *state, const char *key, const char *value)
 }
 
 static void
-vidmode_restore(vidmode_state_t *state)
+vidmode_restore(gamma_state_t *state)
 {
 	uint16_t *gamma_r = &state->saved_ramps[0*state->ramp_size];
 	uint16_t *gamma_g = &state->saved_ramps[1*state->ramp_size];
@@ -184,7 +184,7 @@ vidmode_restore(vidmode_state_t *state)
 
 static int
 vidmode_set_temperature(
-	vidmode_state_t *state, const color_setting_t *setting, int preserve)
+	gamma_state_t *state, const color_setting_t *setting, int preserve)
 {
 	int r;
 
@@ -236,11 +236,11 @@ vidmode_set_temperature(
 
 const gamma_method_t vidmode_gamma_method = {
 	"vidmode", 1,
-	(gamma_method_init_func *)vidmode_init,
-	(gamma_method_start_func *)vidmode_start,
-	(gamma_method_free_func *)vidmode_free,
-	(gamma_method_print_help_func *)vidmode_print_help,
-	(gamma_method_set_option_func *)vidmode_set_option,
-	(gamma_method_restore_func *)vidmode_restore,
-	(gamma_method_set_temperature_func *)vidmode_set_temperature
+	vidmode_init,
+	vidmode_start,
+	vidmode_free,
+	vidmode_print_help,
+	vidmode_set_option,
+	vidmode_restore,
+	vidmode_set_temperature
 };
