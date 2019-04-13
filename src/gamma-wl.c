@@ -42,7 +42,7 @@
 #include "gamma-control-client-protocol.h"
 #include "orbital-authorizer-client-protocol.h"
 
-typedef struct {
+struct gamma_state {
 	struct wl_display *display;
 	struct wl_registry *registry;
 	struct wl_callback *callback;
@@ -51,7 +51,7 @@ typedef struct {
 	int num_outputs;
 	struct output *outputs;
 	int authorized;
-} wayland_state_t;
+};
 
 struct output {
 	uint32_t global_id;
@@ -61,7 +61,7 @@ struct output {
 };
 
 static int
-wayland_init(wayland_state_t **state)
+wayland_init(gamma_state_t **state)
 {
 	/* Initialize state. */
 	*state = malloc(sizeof(**state));
@@ -74,7 +74,7 @@ wayland_init(wayland_state_t **state)
 static void
 authorizer_feedback_granted(void *data, struct orbital_authorizer_feedback *feedback)
 {
-	wayland_state_t *state = data;
+	gamma_state_t *state = data;
 	state->authorized = 1;
 }
 
@@ -93,7 +93,7 @@ static const struct orbital_authorizer_feedback_listener authorizer_feedback_lis
 static void
 registry_global(void *data, struct wl_registry *registry, uint32_t id, const char *interface, uint32_t version)
 {
-	wayland_state_t *state = data;
+	gamma_state_t *state = data;
 
 	if (strcmp(interface, "zwlr_gamma_control_manager_v1") == 0) {
 		state->gamma_control_manager_id = id;
@@ -132,7 +132,7 @@ registry_global(void *data, struct wl_registry *registry, uint32_t id, const cha
 static void
 registry_global_remove(void *data, struct wl_registry *registry, uint32_t id)
 {
-	wayland_state_t *state = data;
+	gamma_state_t *state = data;
 
 	if (state->gamma_control_manager_id == id) {
 		fprintf(stderr, _("The zwlr_gamma_control_manager_v1 was removed\n"));
@@ -184,7 +184,7 @@ static const struct zwlr_gamma_control_v1_listener gamma_control_listener = {
 };
 
 static int
-wayland_start(wayland_state_t *state)
+wayland_start(gamma_state_t *state)
 {
 	state->display = wl_display_connect(NULL);
 	if (!state->display) {
@@ -207,7 +207,7 @@ wayland_start(wayland_state_t *state)
 }
 
 static void
-wayland_restore(wayland_state_t *state)
+wayland_restore(gamma_state_t *state)
 {
 	for (int i = 0; i < state->num_outputs; ++i) {
 		struct output *output = &state->outputs[i];
@@ -220,7 +220,7 @@ wayland_restore(wayland_state_t *state)
 }
 
 static void
-wayland_free(wayland_state_t *state)
+wayland_free(gamma_state_t *state)
 {
 	int ret = 0;
 	/* Wait for the sync callback to destroy everything, otherwise
@@ -263,7 +263,7 @@ wayland_print_help(FILE *f)
 }
 
 static int
-wayland_set_option(wayland_state_t *state, const char *key, const char *value)
+wayland_set_option(gamma_state_t *state, const char *key, const char *value)
 {
 	return 0;
 }
@@ -271,7 +271,7 @@ wayland_set_option(wayland_state_t *state, const char *key, const char *value)
 static void
 callback_done(void *data, struct wl_callback *cb, uint32_t t)
 {
-	wayland_state_t *state = data;
+	gamma_state_t *state = data;
 	state->callback = NULL;
 	wl_callback_destroy(cb);
 }
@@ -281,7 +281,8 @@ static const struct wl_callback_listener callback_listener = {
 };
 
 static int
-wayland_set_temperature(wayland_state_t *state, const color_setting_t *setting)
+wayland_set_temperature(gamma_state_t *state, const color_setting_t *setting,
+			int dummy_preserve, int invert)
 {
 	int ret = 0, roundtrip = 0;
 
@@ -341,7 +342,7 @@ wayland_set_temperature(wayland_state_t *state, const color_setting_t *setting)
 			b_gamma[i] = value;
 		}
 
-		colorramp_fill(r_gamma, g_gamma, b_gamma, size, setting);
+		colorramp_fill(r_gamma, g_gamma, b_gamma, size, setting, invert);
 		if (munmap(ptr, total_bytes) == -1) {
 			perror("munmap");
 			close(fd);
@@ -362,11 +363,11 @@ wayland_set_temperature(wayland_state_t *state, const color_setting_t *setting)
 const gamma_method_t wl_gamma_method = {
 	"wayland",
 	1,
-	(gamma_method_init_func *) wayland_init,
-	(gamma_method_start_func *) wayland_start,
-	(gamma_method_free_func *) wayland_free,
-	(gamma_method_print_help_func *) wayland_print_help,
-	(gamma_method_set_option_func *) wayland_set_option,
-	(gamma_method_restore_func *) wayland_restore,
-	(gamma_method_set_temperature_func *) wayland_set_temperature,
+	wayland_init,
+	wayland_start,
+	wayland_free,
+	wayland_print_help,
+	wayland_set_option,
+	wayland_restore,
+	wayland_set_temperature,
 };

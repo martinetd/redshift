@@ -179,6 +179,7 @@ print_help(const char *program_name)
 	fputs(_("  -b DAY:NIGHT\tScreen brightness to apply (between 0.1 and 1.0)\n"
 		"  -c FILE\tLoad settings from specified configuration file\n"
 		"  -g R:G:B\tAdditional gamma correction to apply\n"
+		"  -i\t\tInvert screen colors by inverting gamma ramps\n"
 		"  -l LAT:LON\tYour current location\n"
 		"  -l PROVIDER\tSelect provider for automatic"
 		" location updates\n"
@@ -321,6 +322,7 @@ options_init(options_t *options)
 
 	options->use_fade = -1;
 	options->preserve_gamma = 1;
+	options->invert = 0;
 	options->mode = PROGRAM_MODE_CONTINUAL;
 	options->verbose = 0;
 }
@@ -363,6 +365,9 @@ parse_command_line_option(
 	case 'h':
 		print_help(program_name);
 		exit(EXIT_SUCCESS);
+		break;
+	case 'i':
+		options->invert = 1;
 		break;
 	case 'l':
 		/* Print list of providers if argument is `list' */
@@ -495,7 +500,7 @@ options_parse_args(
 {
 	const char* program_name = argv[0];
 	int opt;
-	while ((opt = getopt(argc, argv, "b:c:g:hl:m:oO:pPrt:vVx")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:g:hil:m:oO:pPrt:vVx")) != -1) {
 		char option = opt;
 		int r = parse_command_line_option(
 			option, optarg, options, program_name, gamma_methods,

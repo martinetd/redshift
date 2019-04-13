@@ -274,7 +274,8 @@ drm_set_option(gamma_state_t *state, const char *key, const char *value)
 
 static int
 drm_set_temperature(
-	gamma_state_t *state, const color_setting_t *setting, int preserve)
+	gamma_state_t *state, const color_setting_t *setting, 
+	int preserve, int invert)
 {
 	drm_crtc_state_t *crtcs = state->crtcs;
 	int last_gamma_size = 0;
@@ -312,7 +313,7 @@ drm_set_temperature(
 		}
 
 		colorramp_fill(r_gamma, g_gamma, b_gamma, crtcs->gamma_size,
-			       setting);
+			       setting, invert);
 		drmModeCrtcSetGamma(state->fd, crtcs->crtc_id, crtcs->gamma_size,
 				    r_gamma, g_gamma, b_gamma);
 	}

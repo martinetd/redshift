@@ -161,8 +161,8 @@ w32gdi_restore(gamma_state_t *state)
 }
 
 static int
-w32gdi_set_temperature(
-	gamma_state_t *state, const color_setting_t *setting, int preserve)
+w32gdi_set_temperature(gamma_state_t *state, const color_setting_t *setting,
+		       int preserve, int invert)
 {
 	BOOL r;
 
@@ -201,7 +201,7 @@ w32gdi_set_temperature(
 	}
 
 	colorramp_fill(gamma_r, gamma_g, gamma_b, GAMMA_RAMP_SIZE,
-		       setting);
+		       setting, invert);
 
 	/* Set new gamma ramps */
 	r = FALSE;
