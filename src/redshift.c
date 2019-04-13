@@ -802,7 +802,7 @@ run_continual_mode(const location_provider_t *provider,
 
 		/* Adjust temperature */
 		r = method->set_temperature(
-			method_state, &interp, preserve_gamma);
+			method_state, &interp, preserve_gamma, 0);
 		if (r < 0) {
 			fputs(_("Temperature adjustment failed.\n"),
 			      stderr);
@@ -1236,7 +1236,8 @@ main(int argc, char *argv[])
 		if (options.mode != PROGRAM_MODE_PRINT) {
 			/* Adjust temperature */
 			r = options.method->set_temperature(
-				method_state, &interp, options.preserve_gamma);
+				method_state, &interp,
+				options.preserve_gamma, options.invert);
 			if (r < 0) {
 				fputs(_("Temperature adjustment failed.\n"),
 				      stderr);
@@ -1267,7 +1268,8 @@ main(int argc, char *argv[])
 		color_setting_t manual = scheme->day;
 		manual.temperature = options.temp_set;
 		r = options.method->set_temperature(
-			method_state, &manual, options.preserve_gamma);
+			method_state, &manual,
+			options.preserve_gamma, options.invert);
 		if (r < 0) {
 			fputs(_("Temperature adjustment failed.\n"), stderr);
 			options.method->free(method_state);
@@ -1290,7 +1292,7 @@ main(int argc, char *argv[])
 		color_setting_t reset;
 		color_setting_reset(&reset);
 
-		r = options.method->set_temperature(method_state, &reset, 0);
+		r = options.method->set_temperature(method_state, &reset, 0, 0);
 		if (r < 0) {
 			fputs(_("Temperature adjustment failed.\n"), stderr);
 			options.method->free(method_state);

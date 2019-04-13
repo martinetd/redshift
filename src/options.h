@@ -36,6 +36,8 @@ typedef struct {
 	int use_fade;
 	/* Whether to preserve gamma ramps if supported by gamma method. */
 	int preserve_gamma;
+	/* Whether to invert the screen colors by inverting the gamma ramps. */
+	int invert;
 
 	/* Selected gamma method. */
 	const gamma_method_t *method;

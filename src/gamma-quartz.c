@@ -190,7 +190,7 @@ quartz_set_option(gamma_state *state, const char *key, const char *value)
 static void
 quartz_set_temperature_for_display(
 	gamma_state *state, int display_index,
-	const color_setting_t *setting, int preserve)
+	const color_setting_t *setting, int preserve, int invert)
 {
 	CGDirectDisplayID display = state->displays[display_index].display;
 	uint32_t ramp_size = state->displays[display_index].ramp_size;
@@ -221,7 +221,7 @@ quartz_set_temperature_for_display(
 	}
 
 	colorramp_fill_float(gamma_r, gamma_g, gamma_b, ramp_size,
-			     setting);
+			     setting, invert);
 
 	CGError error =
 		CGSetDisplayTransferByTable(display, ramp_size,
@@ -235,12 +235,12 @@ quartz_set_temperature_for_display(
 }
 
 static int
-quartz_set_temperature(
-	gamma_state *state, const color_setting_t *setting, int preserve)
+quartz_set_temperature(gamma_state *state, const color_setting_t *setting,
+		       int preserve, int invert)
 {
 	for (int i = 0; i < state->display_count; i++) {
 		quartz_set_temperature_for_display(
-			state, i, setting, preserve);
+			state, i, setting, preserve, invert);
 	}
 
 	return 0;

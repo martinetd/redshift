@@ -21,7 +21,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "redshift.h"
+#include "colorramp.h"
 
 /* Whitepoint values for temperatures at 100K intervals.
    These will be interpolated for the actual temperature.
@@ -287,8 +287,25 @@ interpolate_color(float a, const float *c1, const float *c2, float *c)
 
 void
 colorramp_fill(uint16_t *gamma_r, uint16_t *gamma_g, uint16_t *gamma_b,
-	       int size, const color_setting_t *setting)
+	       int size, const color_setting_t *setting, int invert)
 {
+	if (invert) {
+		uint16_t gamma_tmp;
+		for (int i = 0; i < size/2; i++) {
+			gamma_tmp  = gamma_r[i];
+			gamma_r[i] = gamma_r[size - i - 1];
+			gamma_r[size - 1 - i] = gamma_tmp;
+
+			gamma_tmp  = gamma_g[i];
+			gamma_g[i] = gamma_g[size - i - 1];
+			gamma_g[size - 1 - i] = gamma_tmp;
+
+			gamma_tmp  = gamma_b[i];
+			gamma_b[i] = gamma_b[size - i - 1];
+			gamma_b[size - 1 - i] = gamma_tmp;
+		}
+	}
+
 	/* Approximate white point */
 	float white_point[3];
 	float alpha = (setting->temperature % 100) / 100.0;
@@ -308,8 +325,25 @@ colorramp_fill(uint16_t *gamma_r, uint16_t *gamma_g, uint16_t *gamma_b,
 
 void
 colorramp_fill_float(float *gamma_r, float *gamma_g, float *gamma_b,
-		     int size, const color_setting_t *setting)
+		     int size, const color_setting_t *setting, int invert)
 {
+	if (invert) {
+		float gamma_tmp;
+		for (int i = 0; i < size/2; i++) {
+			gamma_tmp  = gamma_r[i];
+			gamma_r[i] = gamma_r[size - i - 1];
+			gamma_r[size - 1 - i] = gamma_tmp;
+
+			gamma_tmp  = gamma_g[i];
+			gamma_g[i] = gamma_g[size - i - 1];
+			gamma_g[size - 1 - i] = gamma_tmp;
+
+			gamma_tmp  = gamma_b[i];
+			gamma_b[i] = gamma_b[size - i - 1];
+			gamma_b[size - 1 - i] = gamma_tmp;
+		}
+	}
+
 	/* Approximate white point */
 	float white_point[3];
 	float alpha = (setting->temperature % 100) / 100.0;
