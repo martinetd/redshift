@@ -178,6 +178,7 @@ print_help(const char *program_name)
 	   no-wrap */
 	fputs(_("  -b DAY:NIGHT\tScreen brightness to apply (between 0.1 and 1.0)\n"
 		"  -c FILE\tLoad settings from specified configuration file\n"
+		"  -C FILE\tContinuously read commands from FILE (see below)\n"
 		"  -g R:G:B\tAdditional gamma correction to apply\n"
 		"  -i\t\tInvert screen colors by inverting gamma ramps\n"
 		"  -l LAT:LON\tYour current location\n"
@@ -212,6 +213,17 @@ print_help(const char *program_name)
 		 "  Daytime temperature: %uK\n"
 		 "  Night temperature: %uK\n"),
 	       DEFAULT_DAY_TEMP, DEFAULT_NIGHT_TEMP);
+
+	fputs("\n", stdout);
+
+	/* TRANSLATORS: more help output */
+	printf(_("With -C, redshift continuously reads commands from FILE.\n"
+		 "If -, commands are read from stdin; "
+		 "otherwise, FILE is typically a named pipe.\n"
+		 "The commands are identical in syntax to the command-line "
+		 "arguments,\nincluding the leading dash. "
+		 "Some of these commands have no effect however.\n"
+		 "In addition, 'q' (without dash) quits the program.\n"));
 
 	fputs("\n", stdout);
 
@@ -290,6 +302,7 @@ void
 options_init(options_t *options)
 {
 	options->config_filepath = NULL;
+	options->continual_cmds = NULL;
 
 	/* Default elevation values. */
 	options->scheme.high = TRANSITION_HIGH;
@@ -347,6 +360,27 @@ parse_command_line_option(
 		free(options->config_filepath);
 		options->config_filepath = strdup(value);
 		break;
+	case 'C':
+		if (strcmp(value, "-") == 0) {
+			options->continual_cmds = stdin;
+			s = "stdin";
+		}
+		else {
+			options->continual_cmds = fopen(value, "r+");
+			/* We're only reading, but opening a fifo also for
+			   writing prevents fopen() from blocking and
+			   from receiving an EOF when the last writer quits. */
+			if (options->continual_cmds)
+				s = value;
+			else {
+				fprintf(stderr,
+					_("Cannot open command file %s\n"),
+					value);
+				exit(EXIT_FAILURE);
+			}
+		}
+		fprintf(stderr, _("Reading continual commands from %s\n"), s);
+		break;
 	case 'g':
 		r = parse_gamma_string(value, options->scheme.day.gamma);
 		if (r < 0) {
@@ -370,6 +404,9 @@ parse_command_line_option(
 		options->invert = 1;
 		break;
 	case 'l':
+		if (!location_providers)
+			break;	/* ignore this continual command */
+
 		/* Print list of providers if argument is `list' */
 		if (strcasecmp(value, "list") == 0) {
 			print_provider_list(location_providers);
@@ -415,6 +452,9 @@ parse_command_line_option(
 		}
 		break;
 	case 'm':
+		if (!gamma_methods)
+			break;	/* ignore this continual command */
+
 		/* Print list of methods if argument is `list' */
 		if (strcasecmp(value, "list") == 0) {
 			print_method_list(gamma_methods);
@@ -500,7 +540,7 @@ options_parse_args(
 {
 	const char* program_name = argv[0];
 	int opt;
-	while ((opt = getopt(argc, argv, "b:c:g:hil:m:oO:pPrt:vVx")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:C:g:hil:m:oO:pPrt:vVx")) != -1) {
 		char option = opt;
 		int r = parse_command_line_option(
 			option, optarg, options, program_name, gamma_methods,
@@ -650,6 +690,59 @@ options_parse_config_file(
 		setting = setting->next;
 	}
 }
+
+
+/* Read continual commands until newline. Returns 0 on success. */
+int
+options_parse_continual_cmds(options_t *options)
+{
+	const int cmdbuf_len = 1024;
+	char cmdbuf[cmdbuf_len];
+	cmdbuf[0] = 'r'; 	/* dummy argv[0] */
+	cmdbuf[1] = ' ';
+	if (fgets(cmdbuf + 2, cmdbuf_len - 2, options->continual_cmds)
+	    != cmdbuf + 2) {
+		fputs(_("Error reading continual commands\n"), stderr);
+		return -1;
+	}
+
+	if (cmdbuf[2] == 'q') {	/* no leading dash */
+		fputs(_("Quitting as instructed\n"), stderr);
+		exit(EXIT_SUCCESS);
+	}
+
+	int cmdbuf_last_i = strlen(cmdbuf) - 1;
+	if (cmdbuf[cmdbuf_last_i] != '\n') {
+		fputs(_("Error: continual command line too long\n"), stderr);
+		return -1;
+	}
+	cmdbuf[cmdbuf_last_i] = 0;
+
+	const int argv_len = 256;
+	int argc = 0;
+	char *argv[argv_len];
+	argv[argc++] = strtok(cmdbuf, " ");
+	while ((argv[argc++] = strtok(NULL, " "))) {
+		if (argc >= argv_len - 1) {
+			fputs(_("Error: too many args in continual cmd line\n"),
+			      stderr);
+			return -1;
+		}
+	}
+	argc--;			/* subtract NULL terminator */
+
+	/* Repeated -i to turn off color inversion: */
+	int invert = options->invert;
+	options->invert = 0;
+
+	optind = 1;
+	/* -l and -m do not make sense here and will be ignored: */
+	options_parse_args(options, argc, argv, NULL, NULL);
+
+	options->invert = invert != options->invert;
+	return 0;
+}
+
 
 /* Replace unspecified options with default values. */
 void
