@@ -23,8 +23,8 @@
 #include "redshift.h"
 
 typedef struct {
-	/* Path to config file */
-	char *config_filepath;
+	char *config_filepath;	/* Path to config file */
+	FILE *continual_cmds;
 
 	transition_scheme_t scheme;
 	program_mode_t mode;
@@ -60,6 +60,7 @@ void options_parse_config_file(
 	options_t *options, config_ini_state_t *config_state,
 	const gamma_method_t *gamma_methods,
 	const location_provider_t *location_providers);
+int options_parse_continual_cmds(options_t *options);
 void options_set_defaults(options_t *options);
 
 #endif /* ! REDSHIFT_OPTIONS_H */

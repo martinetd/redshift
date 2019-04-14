@@ -28,6 +28,7 @@
 #include <math.h>
 #include <locale.h>
 #include <errno.h>
+#include <sys/select.h>
 
 /* poll.h is not available on Windows but there is no Windows location provider
    using polling. On Windows, we just define some stubs to make things compile.
@@ -602,12 +603,10 @@ ease_fade(double t)
    current time and continuously updates the screen to the appropriate
    color temperature. */
 static int
-run_continual_mode(const location_provider_t *provider,
+run_continual_mode(options_t *options,
 		   location_state_t *location_state,
 		   const transition_scheme_t *scheme,
-		   const gamma_method_t *method,
-		   gamma_state_t *method_state,
-		   int use_fade, int preserve_gamma, int verbose)
+		   gamma_state_t *method_state)
 {
 	int r;
 
@@ -640,7 +639,7 @@ run_continual_mode(const location_provider_t *provider,
 			" to become available...\n"), stderr);
 
 		/* Get initial location from provider */
-		r = provider_get_location(provider, location_state, -1, &loc);
+		r = provider_get_location(options->provider, location_state, -1, &loc);
 		if (r < 0) {
 			fputs(_("Unable to get location"
 				" from provider.\n"), stderr);
@@ -656,7 +655,7 @@ run_continual_mode(const location_provider_t *provider,
 		print_location(&loc);
 	}
 
-	if (verbose) {
+	if (options->verbose) {
 		printf(_("Color temperature: %uK\n"), interp.temperature);
 		printf(_("Brightness: %.2f\n"), interp.brightness);
 	}
@@ -686,7 +685,7 @@ run_continual_mode(const location_provider_t *provider,
 		}
 
 		/* Print status change */
-		if (verbose && disabled != prev_disabled) {
+		if (options->verbose && disabled != prev_disabled) {
 			printf(_("Status: %s\n"), disabled ?
 			       _("Disabled") : _("Enabled"));
 		}
@@ -739,7 +738,7 @@ run_continual_mode(const location_provider_t *provider,
 		   or if we are in the transition period. In transition we
 		   print the progress, so we always print it in
 		   that case. */
-		if (verbose && (period != prev_period ||
+		if (options->verbose && (period != prev_period ||
 				period == PERIOD_TRANSITION)) {
 			print_period(period, transition_prog);
 		}
@@ -751,7 +750,7 @@ run_continual_mode(const location_provider_t *provider,
 
 		/* Start fade if the parameter differences are too big to apply
 		   instantly. */
-		if (use_fade) {
+		if (options->use_fade) {
 			if ((fade_length == 0 &&
 			     color_setting_diff_is_major(
 				     &interp,
@@ -787,7 +786,7 @@ run_continual_mode(const location_provider_t *provider,
 		/* Break loop when done and final fade is over */
 		if (done && fade_length == 0) break;
 
-		if (verbose) {
+		if (options->verbose) {
 			if (prev_target_interp.temperature !=
 			    target_interp.temperature) {
 				printf(_("Color temperature: %uK\n"),
@@ -801,8 +800,9 @@ run_continual_mode(const location_provider_t *provider,
 		}
 
 		/* Adjust temperature */
-		r = method->set_temperature(
-			method_state, &interp, preserve_gamma, 0);
+		r = options->method->set_temperature(
+			method_state, &interp, options->preserve_gamma,
+			options->invert);
 		if (r < 0) {
 			fputs(_("Temperature adjustment failed.\n"),
 			      stderr);
@@ -822,7 +822,7 @@ run_continual_mode(const location_provider_t *provider,
 		/* Update location. */
 		int loc_fd = -1;
 		if (need_location) {
-			loc_fd = provider->get_fd(location_state);
+			loc_fd = options->provider->get_fd(location_state);
 		}
 
 		if (loc_fd >= 0) {
@@ -845,7 +845,7 @@ run_continual_mode(const location_provider_t *provider,
 			   information. */
 			location_t new_loc;
 			int new_available;
-			r = provider->handle(
+			r = options->provider->handle(
 				location_state, &new_loc,
 				&new_available);
 			if (r < 0) {
@@ -878,12 +878,31 @@ run_continual_mode(const location_provider_t *provider,
 				return -1;
 			}
 		} else {
-			systemtime_msleep(delay);
+			if (options->continual_cmds) {
+				int fd = fileno(options->continual_cmds);
+				fd_set readfds;
+				FD_ZERO(&readfds);
+				FD_SET(fd, &readfds);
+				struct timeval timeout = {
+					delay / 1000,
+					(delay % 1000) * 1000
+				};
+				if (select(fd + 1, &readfds, NULL, NULL,
+					   &timeout) < 0) {
+					perror("select()");
+					return -1;
+				}
+				if (FD_ISSET(fd, &readfds) &&
+				    options_parse_continual_cmds(options))
+					return -1;
+			}
+			else
+				systemtime_msleep(delay);
 		}
 	}
 
 	/* Restore saved gamma ramps */
-	method->restore(method_state);
+	options->method->restore(method_state);
 
 	return 0;
 }
@@ -1311,11 +1330,8 @@ main(int argc, char *argv[])
 	break;
 	case PROGRAM_MODE_CONTINUAL:
 	{
-		r = run_continual_mode(
-			options.provider, location_state, scheme,
-			options.method, method_state,
-			options.use_fade, options.preserve_gamma,
-			options.verbose);
+		r = run_continual_mode(&options,
+			location_state, scheme,	method_state);
 		if (r < 0) exit(EXIT_FAILURE);
 	}
 	break;
