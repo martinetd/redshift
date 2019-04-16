@@ -696,11 +696,13 @@ options_parse_config_file(
 int
 options_parse_continual_cmds(options_t *options)
 {
-	const int cmdbuf_len = 1024;
-	char cmdbuf[cmdbuf_len];
+#define CMDBUF_LEN 1024
+#define ARGV_LEN    256
+
+	static char cmdbuf[CMDBUF_LEN]; /* risks being pointed into by callee */
 	cmdbuf[0] = 'r'; 	/* dummy argv[0] */
 	cmdbuf[1] = ' ';
-	if (fgets(cmdbuf + 2, cmdbuf_len - 2, options->continual_cmds)
+	if (fgets(cmdbuf + 2, CMDBUF_LEN - 2, options->continual_cmds)
 	    != cmdbuf + 2) {
 		fputs(_("Error reading continual commands\n"), stderr);
 		return -1;
@@ -718,12 +720,11 @@ options_parse_continual_cmds(options_t *options)
 	}
 	cmdbuf[cmdbuf_last_i] = 0;
 
-	const int argv_len = 256;
 	int argc = 0;
-	char *argv[argv_len];
+	static char *argv[ARGV_LEN]; /* risks being pointed to by callee */
 	argv[argc++] = strtok(cmdbuf, " ");
 	while ((argv[argc++] = strtok(NULL, " "))) {
-		if (argc >= argv_len - 1) {
+		if (argc >= ARGV_LEN - 1) {
 			fputs(_("Error: too many args in continual cmd line\n"),
 			      stderr);
 			return -1;
