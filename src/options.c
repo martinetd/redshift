@@ -708,7 +708,7 @@ options_parse_continual_cmds(options_t *options)
 
 	if (cmdbuf[2] == 'q') {	/* no leading dash */
 		fputs(_("Quitting as instructed\n"), stderr);
-		exit(EXIT_SUCCESS);
+		return 1;
 	}
 
 	int cmdbuf_last_i = strlen(cmdbuf) - 1;

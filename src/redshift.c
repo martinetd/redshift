@@ -887,9 +887,11 @@ run_continual_mode(options_t *options,
 				perror("poll(commands)");
 				return -1;
 			}
-			if (r > 0 &&
-			    options_parse_continual_cmds(options))
-				return -1;
+			if (r > 0) {
+				r = options_parse_continual_cmds(options);
+				if (r < 0)  return -1;
+				if (r > 0)  exiting = 1;
+			}
 		}
 		else
 			systemtime_msleep(delay);
