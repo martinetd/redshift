@@ -28,7 +28,6 @@
 #include <math.h>
 #include <locale.h>
 #include <errno.h>
-#include <sys/select.h>
 
 /* poll.h is not available on Windows but there is no Windows location provider
    using polling. On Windows, we just define some stubs to make things compile.
@@ -879,20 +878,16 @@ run_continual_mode(options_t *options,
 			}
 		} else {
 			if (options->continual_cmds) {
-				int fd = fileno(options->continual_cmds);
-				fd_set readfds;
-				FD_ZERO(&readfds);
-				FD_SET(fd, &readfds);
-				struct timeval timeout = {
-					delay / 1000,
-					(delay % 1000) * 1000
-				};
-				if (select(fd + 1, &readfds, NULL, NULL,
-					   &timeout) < 0) {
-					perror("select()");
+				struct pollfd pollfd;
+				pollfd.fd = fileno(options->continual_cmds);
+				pollfd.events = POLLIN;
+				r = poll(&pollfd, 1, delay);
+				if (r < 0) {
+					if (errno == EINTR) continue;
+					perror("poll(commands)");
 					return -1;
 				}
-				if (FD_ISSET(fd, &readfds) &&
+				if (r > 0 &&
 				    options_parse_continual_cmds(options))
 					return -1;
 			}
