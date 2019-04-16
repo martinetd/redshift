@@ -829,71 +829,70 @@ run_continual_mode(options_t *options,
 			struct pollfd pollfds[1];
 			pollfds[0].fd = loc_fd;
 			pollfds[0].events = POLLIN;
-			int r = poll(pollfds, 1, delay);
+			int r = poll(pollfds, 1, 0);
 			if (r < 0) {
 				if (errno == EINTR) continue;
 				perror("poll");
 				fputs(_("Unable to get location"
 					" from provider.\n"), stderr);
 				return -1;
-			} else if (r == 0) {
-				continue;
 			}
-
-			/* Get new location and availability
-			   information. */
-			location_t new_loc;
-			int new_available;
-			r = options->provider->handle(
-				location_state, &new_loc,
-				&new_available);
-			if (r < 0) {
-				fputs(_("Unable to get location"
-					" from provider.\n"), stderr);
-				return -1;
-			}
-
-			if (!new_available &&
-			    new_available != location_available) {
-				fputs(_("Location is temporarily"
-				        " unavailable; Using previous"
-					" location until it becomes"
-					" available...\n"), stderr);
-			}
-
-			if (new_available &&
-			    (new_loc.lat != loc.lat ||
-			     new_loc.lon != loc.lon ||
-			     new_available != location_available)) {
-				loc = new_loc;
-				print_location(&loc);
-			}
-
-			location_available = new_available;
-
-			if (!location_is_valid(&loc)) {
-				fputs(_("Invalid location returned"
-					" from provider.\n"), stderr);
-				return -1;
-			}
-		} else {
-			if (options->continual_cmds) {
-				struct pollfd pollfd;
-				pollfd.fd = fileno(options->continual_cmds);
-				pollfd.events = POLLIN;
-				r = poll(&pollfd, 1, delay);
+			else if (r == 1) {
+				/* Get new location and availability
+				   information. */
+				location_t new_loc;
+				int new_available;
+				r = options->provider->handle(
+					location_state, &new_loc,
+					&new_available);
 				if (r < 0) {
-					if (errno == EINTR) continue;
-					perror("poll(commands)");
+					fputs(_("Unable to get location"
+						" from provider.\n"), stderr);
 					return -1;
 				}
-				if (r > 0 &&
-				    options_parse_continual_cmds(options))
+
+				if (!new_available &&
+				    new_available != location_available) {
+					fputs(_("Location is temporarily"
+						" unavailable; Using previous"
+						" location until it becomes"
+						" available...\n"), stderr);
+				}
+
+				if (new_available &&
+				    (new_loc.lat != loc.lat ||
+				     new_loc.lon != loc.lon ||
+				     new_available != location_available)) {
+					loc = new_loc;
+					print_location(&loc);
+				}
+
+				location_available = new_available;
+
+				if (!location_is_valid(&loc)) {
+					fputs(_("Invalid location returned"
+						" from provider.\n"), stderr);
 					return -1;
+				}
 			}
-			else
-				systemtime_msleep(delay);
+		} 
+
+		if (options->continual_cmds) {
+			struct pollfd pollfd;
+			pollfd.fd = fileno(options->continual_cmds);
+			pollfd.events = POLLIN;
+			r = poll(&pollfd, 1, delay);
+			if (r < 0) {
+				if (errno == EINTR) continue;
+				perror("poll(commands)");
+				return -1;
+			}
+			if (r > 0 &&
+			    options_parse_continual_cmds(options))
+				return -1;
 		}
+		else
+			systemtime_msleep(delay);
 	}
 
 	/* Restore saved gamma ramps */
