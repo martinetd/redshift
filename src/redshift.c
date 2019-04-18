@@ -126,7 +126,6 @@ int poll(struct pollfd *fds, int nfds, int timeout) { abort(); return -1; }
 #define MAX_GAMMA  10.0
 
 /* Duration of sleep between screen updates (milliseconds). */
-#define SLEEP_DURATION        5000
 #define SLEEP_DURATION_SHORT  100
 
 /* Length of fade in numbers of short sleep durations. */
@@ -813,7 +812,7 @@ run_continual_mode(options_t *options,
 		prev_target_interp = target_interp;
 
 		/* Sleep length depends on whether a fade is ongoing. */
-		int delay = SLEEP_DURATION;
+		int delay = options->sleep_duration;
 		if (fade_length != 0) {
 			delay = SLEEP_DURATION_SHORT;
 		}

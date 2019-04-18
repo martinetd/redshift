@@ -336,6 +336,7 @@ options_init(options_t *options)
 	options->use_fade = -1;
 	options->preserve_gamma = 1;
 	options->invert = 0;
+	options->sleep_duration = 5000;
 	options->mode = PROGRAM_MODE_CONTINUAL;
 	options->verbose = 0;
 }
@@ -501,6 +502,9 @@ parse_command_line_option(
 	case 'r':
 		options->use_fade = 0;
 		break;
+	case 'S':
+		options->sleep_duration = atoi(value);
+		break;
 	case 't':
 		s = strchr(value, ':');
 		if (s == NULL) {
@@ -540,7 +544,7 @@ options_parse_args(
 {
 	const char* program_name = argv[0];
 	int opt;
-	while ((opt = getopt(argc, argv, "b:c:C:g:hil:m:oO:pPrt:vVx")) != -1) {
+	while ((opt = getopt(argc, argv, "b:c:C:g:hil:m:oO:pPrS:t:vVx")) != -1) {
 		char option = opt;
 		int r = parse_command_line_option(
 			option, optarg, options, program_name, gamma_methods,

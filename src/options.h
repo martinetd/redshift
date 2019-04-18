@@ -38,6 +38,8 @@ typedef struct {
 	int preserve_gamma;
 	/* Whether to invert the screen colors by inverting the gamma ramps. */
 	int invert;
+	/* How long to wait before waking up to check adjustment in second */
+	int sleep_duration;
 
 	/* Selected gamma method. */
 	const gamma_method_t *method;
